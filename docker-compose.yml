@@ -31,7 +31,7 @@ services:
       MYSQL_PASSWORD: root
       MYSQL_USER: laravel
     ports:
-      - "3306:3306"
+      - "33061:3306"
     networks:
       - laravel
 

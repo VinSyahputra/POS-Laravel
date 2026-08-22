@@ -15,6 +15,8 @@ return [
 
     'name' => env('APP_NAME', 'Laravel'),
 
+    'outlet_name' => env('OUTLET_NAME', 'POS Food Court'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Environment
