@@ -1,41 +1,64 @@
 @extends('layouts.app')
 
 @section('content')
-<div x-data class="flex h-full">
-    <aside class="flex w-28 shrink-0 flex-col gap-3 bg-slate-900 p-3">
-        <div class="mb-2 flex flex-col items-center pt-2">
-            <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-500 text-2xl">🍽️</div>
-            <span class="mt-2 text-center text-xs font-semibold tracking-wide text-slate-200">POS FOOD COURT</span>
+<div x-data="{ sidebarOpen: false }" class="flex h-full">
+    <div x-show="sidebarOpen" x-cloak @click="sidebarOpen = false"
+        class="fixed inset-0 z-30 bg-black/50 md:hidden"></div>
+
+    <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+        class="fixed inset-y-0 left-0 z-40 flex w-28 shrink-0 flex-col gap-3 bg-slate-900 p-3 transition-transform duration-200 md:relative md:translate-x-0">
+        <div class="mb-2 flex flex-row-reverse items-center justify-between gap-2 pt-1 md:flex-col md:justify-center md:pt-2">
+            <div class="flex items-center gap-2 md:flex-col md:items-center">
+                <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-orange-500 text-2xl">🍽️</div>
+                <span class="hidden text-xs font-semibold tracking-wide text-slate-200 md:mt-2 md:block md:text-center">POS FOOD COURT</span>
+            </div>
+            <button @click="sidebarOpen = false"
+                class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white md:hidden">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
         </div>
 
-        <button @click="$store.ui.tab = 'cashier'"
+        <button @click="$store.ui.tab = 'cashier'; sidebarOpen = false"
             :class="$store.ui.tab === 'cashier' ? 'bg-orange-500 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'"
             class="flex min-h-20 flex-col items-center justify-center gap-1 rounded-xl px-2 py-3 text-sm font-semibold transition">
             <span class="text-2xl">🧾</span> Kasir
         </button>
 
-        <button @click="$store.ui.tab = 'menu'"
+        <button @click="$store.ui.tab = 'menu'; sidebarOpen = false"
             :class="$store.ui.tab === 'menu' ? 'bg-orange-500 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'"
             class="flex min-h-20 flex-col items-center justify-center gap-1 rounded-xl px-2 py-3 text-sm font-semibold transition">
             <span class="text-2xl">🍔</span> Menu
         </button>
 
-        <button @click="$store.ui.tab = 'history'"
+        <button @click="$store.ui.tab = 'history'; sidebarOpen = false"
             :class="$store.ui.tab === 'history' ? 'bg-orange-500 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'"
             class="flex min-h-20 flex-col items-center justify-center gap-1 rounded-xl px-2 py-3 text-sm font-semibold transition">
             <span class="text-2xl">🕘</span> Riwayat
         </button>
 
-        <button @click="$store.ui.tab = 'settings'"
+        <button @click="$store.ui.tab = 'settings'; sidebarOpen = false"
             :class="$store.ui.tab === 'settings' ? 'bg-orange-500 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'"
             class="flex min-h-20 flex-col items-center justify-center gap-1 rounded-xl px-2 py-3 text-sm font-semibold transition">
             <span class="text-2xl">🖨️</span> Printer
         </button>
     </aside>
 
-    <main class="flex-1 overflow-y-auto p-6">
+    <main class="h-full flex-1 overflow-y-auto p-4 md:p-6">
+        <div class="mb-3 flex items-center gap-3 md:hidden">
+            <button @click="sidebarOpen = true"
+                class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-white shadow hover:bg-slate-800">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+            </button>
+            <span class="text-sm font-bold text-slate-600"
+                x-text="$store.ui.tab === 'cashier' ? 'Kasir' : ($store.ui.tab === 'menu' ? 'Food Court Menu' : ($store.ui.tab === 'history' ? 'Riwayat Transaksi' : 'Pengaturan Printer'))"></span>
+        </div>
+
         <section x-show="$store.ui.tab === 'cashier'" x-cloak class="h-full">
-            <div x-data="cashier" class="flex h-full gap-6">
+            <div x-data="cashier" class="flex h-full flex-col gap-4 lg:flex-row lg:gap-6">
                 <div class="flex min-w-0 flex-1 flex-col">
                     <template x-if="error">
                         <div class="mb-4 rounded-xl bg-red-100 px-4 py-3 text-sm font-medium text-red-700" x-text="error"></div>
@@ -73,8 +96,24 @@
                     </div>
                 </div>
 
-                <aside class="flex w-96 shrink-0 flex-col rounded-2xl bg-white shadow">
-                    <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+                <aside class="mb-4 flex w-full shrink-0 flex-col rounded-2xl bg-white shadow lg:mb-0 lg:w-96"
+                    :class="showPayment || lastTransaction || cartExpanded ? '' : 'max-h-[55vh] self-end overflow-hidden lg:max-h-none lg:self-auto'">
+                    <button @click="cartExpanded = !cartExpanded"
+                        class="flex items-center justify-between border-b border-slate-100 px-5 py-4 lg:hidden">
+                        <span class="flex items-center gap-2 text-lg font-bold">
+                            Keranjang
+                            <span x-show="cartCount > 0" x-cloak
+                                class="rounded-full bg-orange-500 px-2.5 py-0.5 text-xs font-bold text-white"
+                                x-text="cartCount"></span>
+                        </span>
+                        <span class="flex items-center gap-3">
+                            <span class="font-extrabold" x-text="'Rp ' + rupiah(cartSubtotal)"></span>
+                            <span class="text-sm font-bold text-slate-400" x-text="cartExpanded ? '▼' : '▲'"></span>
+                        </span>
+                    </button>
+
+                    <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4"
+                        :class="cartExpanded ? '' : 'hidden lg:flex'">
                         <h2 class="text-lg font-bold">Keranjang
                             <span x-show="cartCount > 0" x-cloak
                                 class="ml-1 rounded-full bg-orange-500 px-2.5 py-0.5 text-xs font-bold text-white"
@@ -137,11 +176,11 @@
                         </div>
                     </div>
 
-                    <div class="flex-1 overflow-y-auto px-5 py-4">
+                    <div class="flex-1 overflow-y-auto px-5 py-4" :class="cartExpanded ? '' : 'hidden lg:block'">
                         <template x-if="cart.length === 0">
                             <p class="py-10 text-center text-sm text-slate-400">Klik menu di sebelah kiri untuk menambah item.</p>
                         </template>
-                        <div class="space-y-3">
+                        <div class="space-y-3 pb-4">
                             <template x-for="item in cart" :key="item.menu_id">
                                 <div class="rounded-xl border border-slate-100 p-3">
                                     <div class="flex items-start justify-between gap-2">
@@ -173,7 +212,7 @@
                         </div>
                     </div>
 
-                    <div class="border-t border-slate-100 px-5 py-4">
+                    <div class="border-t border-slate-100 px-5 py-4" :class="cartExpanded || showPayment ? '' : 'hidden lg:block'">
                         <div class="flex items-center justify-between text-lg font-extrabold">
                             <span>Subtotal</span>
                             <span x-text="'Rp ' + rupiah(cartSubtotal)"></span>
@@ -270,8 +309,8 @@
 
         <section x-show="$store.ui.tab === 'menu'" x-cloak class="h-full">
             <div x-data="menuManager" class="flex h-full flex-col">
-                <div class="flex items-center justify-between">
-                    <h1 class="text-2xl font-bold">Food Court Menu</h1>
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <h1 class="text-xl font-bold md:text-2xl">Food Court Menu</h1>
                     <div class="flex gap-2">
                         <button @click="switchSubTab('categories')"
                             :class="subTab === 'categories' ? 'bg-slate-900 text-white' : 'bg-white text-slate-600'"
@@ -305,7 +344,7 @@
                         </form>
                     </div>
 
-                    <div class="overflow-hidden rounded-2xl bg-white shadow">
+                    <div class="overflow-x-auto rounded-2xl bg-white shadow">
                         <table class="w-full text-left text-sm">
                             <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                                 <tr>
@@ -356,7 +395,7 @@
                         </select>
                     </div>
 
-                    <div class="overflow-hidden rounded-2xl bg-white shadow">
+                    <div class="overflow-x-auto rounded-2xl bg-white shadow">
                         <table class="w-full text-left text-sm">
                             <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                                 <tr>
@@ -394,7 +433,7 @@
                     </div>
 
                     <div x-show="showMenuForm" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @click.self="cancelMenuForm()">
-                        <form @submit.prevent="saveMenu()" class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+                        <form @submit.prevent="saveMenu()" class="mx-4 w-full max-w-md rounded-2xl bg-white p-5 shadow-xl md:p-6">
                             <h2 class="text-lg font-bold" x-text="menuForm.id ? 'Edit Menu' : 'Tambah Menu'"></h2>
                             <div class="mt-4 space-y-4">
                                 <div>
@@ -433,7 +472,7 @@
         <section x-show="$store.ui.tab === 'history'" x-cloak>
             <div x-data="history" class="flex h-full flex-col">
                 <div class="flex flex-wrap items-center justify-between gap-4">
-                    <h1 class="text-2xl font-bold">Riwayat Transaksi</h1>
+                    <h1 class="text-xl font-bold md:text-2xl">Riwayat Transaksi</h1>
                     <input type="date" x-model="historyDate" @change="load()"
                         class="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm focus:border-orange-500 focus:outline-none">
                 </div>
@@ -442,7 +481,7 @@
                     <div class="mt-4 rounded-xl bg-red-100 px-4 py-3 text-sm font-medium text-red-700" x-text="error"></div>
                 </template>
 
-                <div class="mt-4 grid grid-cols-2 gap-4">
+                <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div class="rounded-2xl bg-white p-5 shadow">
                         <div class="text-sm font-semibold text-slate-500">Jumlah Transaksi</div>
                         <div class="mt-1 text-3xl font-extrabold" x-text="summary.count"></div>
@@ -490,7 +529,7 @@
                 </div>
 
                 <div x-show="showDetail" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @click.self="closeDetail()">
-                    <div class="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+                    <div class="mx-4 max-h-[85vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-5 shadow-xl md:p-6">
                         <div class="flex items-start justify-between">
                             <div>
                                 <h2 class="text-lg font-bold" x-text="detail?.receipt_number"></h2>
@@ -603,7 +642,7 @@
     </main>
 
     <div x-show="$store.printing.showPreview" x-cloak class="fixed inset-0 z-[70] flex items-center justify-center bg-black/50">
-        <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+        <div class="mx-4 w-full max-w-md rounded-2xl bg-white p-5 shadow-xl md:p-6">
             <h2 class="text-lg font-bold">Preview Nota</h2>
             <p class="mt-1 text-xs text-red-600" x-text="$store.printing.error"></p>
             <pre class="mt-3 max-h-80 overflow-auto rounded-xl bg-slate-900 p-4 font-mono text-xs leading-relaxed text-green-300"

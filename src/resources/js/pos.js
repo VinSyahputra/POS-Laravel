@@ -285,6 +285,7 @@ document.addEventListener('alpine:init', () => {
             }
 
             this.cart.push({ menu_id: menu.id, name: menu.name, price: menu.price, qty: 1 });
+            this.cartExpanded = true;
         },
 
         increase(menuId) {
@@ -360,6 +361,7 @@ document.addEventListener('alpine:init', () => {
         paymentAmount: '',
         cashierName: '',
         showPayment: false,
+        cartExpanded: false,
         submitting: false,
         lastTransaction: null,
         orderNo: '',
@@ -419,6 +421,7 @@ document.addEventListener('alpine:init', () => {
             this.tax = 0;
             this.paymentAmount = '';
             this.showPayment = true;
+            this.cartExpanded = true;
         },
 
         async submitTransaction() {
