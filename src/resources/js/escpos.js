@@ -21,6 +21,14 @@ const padCenter = (text, columns) => {
     return ' '.repeat(left) + text;
 };
 
+const padRightAlign = (text, columns) => {
+    if (text.length >= columns) {
+        return text.slice(0, columns);
+    }
+
+    return ' '.repeat(columns - text.length) + text;
+};
+
 const twoSides = (left, right, columns) => {
     left = String(left);
     right = String(right);
@@ -84,37 +92,23 @@ const formatDateTime = (isoString) => {
 export function receiptLines(transaction, { outletName = 'POS Food Court', paperWidth = '80mm' } = {}) {
     const columns = COLUMNS[paperWidth] ?? 48;
     const headerName = TEMPLATE_LABELS[transaction.template] ?? outletName;
+    const isFoodcourt = transaction.template === 'FOODCOURT';
     const lines = [
-        { text: headerName, align: 'center', bold: true, double: true },
+        { text: headerName, align: 'center', bold: false, double: !isFoodcourt },
     ];
 
     lines.push({ text: dashedLine(columns) });
+    lines.push({ feed: 4 });
 
-    if (transaction.order_no) {
-        lines.push({ text: field('No', transaction.order_no, columns) });
-    }
-
-    if (transaction.transaction_time) {
-        lines.push({ text: field('Tanggal', formatDateTime(transaction.transaction_time), columns) });
-    }
-
-    if (transaction.entry_time) {
-        lines.push({ text: field('Jam Masuk', formatDateTime(transaction.entry_time), columns) });
-    }
-
-    if (transaction.table_no) {
-        lines.push({ text: field('No Meja', transaction.table_no, columns) });
-    }
-
-    if (transaction.mode) {
-        lines.push({ text: field('Mode', transaction.mode, columns) });
-    }
-
-    if (transaction.cashier_name) {
-        lines.push({ text: field('Kasir', transaction.cashier_name, columns) });
-    }
+    lines.push({ text: ' ' + field('No', transaction.order_no || '-', columns), bold: false });
+    lines.push({ text: ' ' + field('Tanggal', transaction.transaction_time ? formatDateTime(transaction.transaction_time) : '-', columns), bold: false });
+    lines.push({ text: ' ' + field('Jam Masuk', transaction.entry_time ? formatDateTime(transaction.entry_time) : '-', columns), bold: false });
+    lines.push({ text: ' ' + field('No Meja', transaction.table_no || '-', columns), bold: false });
+    lines.push({ text: ' ' + field('Mode', transaction.mode || '-', columns), bold: false });
+    lines.push({ text: ' ' + field('Kasir', transaction.cashier_name || '-', columns), bold: false });
 
     lines.push({ text: dashedLine(columns) });
+    lines.push({ feed: 4 });
 
     const items = transaction.items ?? [];
 
@@ -122,11 +116,12 @@ export function receiptLines(transaction, { outletName = 'POS Food Court', paper
         const nameLines = wrapText(item.menu_name, columns);
         nameLines.forEach((nameLine) => lines.push({ text: nameLine, bold: true }));
         lines.push({
-            text: twoSides(`${item.qty}x @${formatAmount(item.price)}`, formatAmount(item.subtotal), columns),
+            text: twoSides(`${item.qty}x   @${formatAmount(item.price)}`, formatAmount(item.subtotal), columns),
         });
     }
 
     lines.push({ text: dashedLine(columns) });
+    lines.push({ feed: 4 });
 
     const itemCount = items.reduce((sum, item) => sum + (Number(item.qty) || 0), 0);
     lines.push({ text: `${itemCount} item` });
@@ -146,13 +141,17 @@ export function receiptLines(transaction, { outletName = 'POS Food Court', paper
     totalsRows.push({ label: paymentLabel, value: formatAmount(transaction.payment_amount) });
 
     if (Number(transaction.change_amount) > 0) {
-        totalsRows.push({ label: 'Kembalian', value: formatAmount(transaction.change_amount) });
+        totalsRows.push({ label: 'Kembalian', value: formatAmount(transaction.change_amount), separatorBefore: true });
     }
 
     // Right-align every label to the same width so the ":" lines up down the column.
     const labelWidth = Math.max(...totalsRows.map((row) => row.label.length));
 
     totalsRows.forEach((row) => {
+        if (row.separatorBefore) {
+            lines.push({ text: '-'.repeat(22), align: 'right' });
+        }
+
         lines.push({
             text: indentedTwoSides(`${row.label.padStart(labelWidth)} :`, row.value, columns),
             indent: true,
@@ -171,10 +170,19 @@ export function buildReceiptText(transaction, options = {}) {
     const { lines, columns } = receiptLines(transaction, options);
 
     return lines
+        .filter((line) => line.feed === undefined)
         .map((line) => {
             const text = line.indent ? ' '.repeat(TOTALS_INDENT_WIDTH) + line.text : line.text;
 
-            return line.align === 'center' ? padCenter(text, columns) : text;
+            if (line.align === 'center') {
+                return padCenter(text, columns);
+            }
+
+            if (line.align === 'right') {
+                return padRightAlign(text, columns);
+            }
+
+            return text;
         })
         .join('\n');
 }
@@ -194,6 +202,13 @@ export function buildReceiptBytes(transaction, options = {}) {
     };
 
     for (const line of lines) {
+        if (line.feed !== undefined) {
+            // Print and feed paper n dots — a small margin, without the full height
+            // (and left/right/bold state churn) of an empty text line.
+            bytes.push(ESC, 0x4a, line.feed);
+            continue;
+        }
+
         if (line.double) {
             bytes.push(GS, 0x21, 0x11);
         } else if (line.tall) {
@@ -202,7 +217,7 @@ export function buildReceiptBytes(transaction, options = {}) {
         }
 
         bytes.push(ESC, 0x45, line.bold ? 1 : 0);
-        bytes.push(ESC, 0x61, line.align === 'center' ? 1 : 0);
+        bytes.push(ESC, 0x61, line.align === 'center' ? 1 : line.align === 'right' ? 2 : 0);
 
         if (line.indent) {
             bytes.push(0x09);
