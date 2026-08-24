@@ -46,11 +46,18 @@ class TransactionController extends Controller
             $tax = (int) ($request->input('tax') ?? 0);
             $total = $request->resolveTotal();
             $paymentAmount = $request->integer('payment_amount');
+            $template = $request->enum('template', Template::class) ?? Template::Foodcourt;
+            $transactionTime = $request->date('transaction_time') ?? now();
+            $orderNo = $request->input('order_no');
+            if ($orderNo !== null && ctype_digit($orderNo)) {
+                $orderNo = str_pad($orderNo, 4, '0', STR_PAD_LEFT);
+            }
 
             $transaction = Transaction::create([
                 'receipt_number' => app(ReceiptNumberService::class)->generate(),
-                'template' => $request->enum('template', Template::class) ?? Template::Foodcourt,
-                'order_no' => $request->input('order_no'),
+                'template' => $template,
+                'order_no' => $orderNo,
+                'generated_no' => $template->code().$transactionTime->format('Ymd').$orderNo,
                 'cashier_name' => $request->input('cashier_name'),
                 'table_no' => $request->input('table_no'),
                 'mode' => $request->input('mode') ?? 'DINE IN',
@@ -61,7 +68,7 @@ class TransactionController extends Controller
                 'payment_amount' => $paymentAmount,
                 'change_amount' => $paymentAmount - $total,
                 'payment_method' => $request->input('payment_method') ?: 'CASH',
-                'transaction_time' => $request->date('transaction_time') ?? now(),
+                'transaction_time' => $transactionTime,
                 'entry_time' => $request->date('entry_time'),
             ]);
 

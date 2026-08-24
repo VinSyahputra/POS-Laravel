@@ -162,9 +162,14 @@
                                     class="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm focus:border-orange-500 focus:outline-none">
                             </div>
                             <div class="col-span-2">
-                                <label class="mb-1 block text-xs font-semibold text-slate-500">No</label>
-                                <input type="text" x-model="orderNo" placeholder="No. urut"
+                                <label class="mb-1 block text-xs font-semibold text-slate-500">No Urut</label>
+                                <input type="text" x-model="orderNo" @blur="padOrderNo()" placeholder="No. urut"
                                     class="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm focus:border-orange-500 focus:outline-none">
+                            </div>
+                            <div class="col-span-2">
+                                <label class="mb-1 block text-xs font-semibold text-slate-500">No</label>
+                                <input type="text" :value="generatedNo" readonly
+                                    class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-500 focus:outline-none">
                             </div>
                         </div>
                     </div>
@@ -528,7 +533,10 @@
                                 <div class="flex justify-between text-slate-500"><span>Kasir</span><span x-text="detail.cashier_name"></span></div>
                             </template>
                             <template x-if="detail?.order_no">
-                                <div class="flex justify-between text-slate-500"><span>No</span><span x-text="detail.order_no"></span></div>
+                                <div class="flex justify-between text-slate-500"><span>No Urut</span><span x-text="detail.order_no"></span></div>
+                            </template>
+                            <template x-if="detail?.generated_no">
+                                <div class="flex justify-between text-slate-500"><span>No</span><span x-text="detail.generated_no"></span></div>
                             </template>
                             <template x-if="detail?.mode">
                                 <div class="flex justify-between text-slate-500"><span>Mode</span><span x-text="detail.mode"></span></div>

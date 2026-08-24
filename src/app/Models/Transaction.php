@@ -15,6 +15,7 @@ class Transaction extends Model
         'receipt_number',
         'template',
         'order_no',
+        'generated_no',
         'cashier_name',
         'table_no',
         'mode',

@@ -16,4 +16,13 @@ enum Template: string
             self::Cafe1912 => 'Cafe 1912',
         };
     }
+
+    public function code(): string
+    {
+        return match ($this) {
+            self::Foodcourt => 'UMB0101',
+            self::PastryBakery => 'UMB0201',
+            self::Cafe1912 => 'UMB0301',
+        };
+    }
 }

@@ -409,10 +409,30 @@ document.addEventListener('alpine:init', () => {
             return this.cart.length > 0 && (Number(this.paymentAmount) || 0) >= this.total && !this.submitting;
         },
 
+        padOrderNo() {
+            if (this.orderNo && /^\d+$/.test(this.orderNo)) {
+                this.orderNo = this.orderNo.padStart(4, '0');
+            }
+        },
+
+        get generatedNo() {
+            const codes = { FOODCOURT: 'UMB0101', PASTRY_BAKERY: 'UMB0201', CAFE_1912: 'UMB0301' };
+            const code = codes[this.template] ?? '';
+            const date = this.orderDate ? new Date(this.orderDate) : new Date();
+            const pad = (value) => String(value).padStart(2, '0');
+            const ymd = Number.isNaN(date.getTime())
+                ? ''
+                : `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}`;
+            const orderNo = /^\d+$/.test(this.orderNo) ? this.orderNo.padStart(4, '0') : this.orderNo;
+
+            return `${code}${ymd}${orderNo}`;
+        },
+
         async submitTransaction() {
             if (!this.canSubmit) {
                 return;
             }
+            this.padOrderNo();
             this.submitting = true;
             this.error = null;
             try {

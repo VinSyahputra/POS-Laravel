@@ -101,7 +101,7 @@ function foodcourtLines(transaction, columns, headerName) {
     lines.push({ text: dashedLine(columns) });
     lines.push({ feed: 4 });
 
-    lines.push({ text: field('No', transaction.order_no || '-', columns), bold: false });
+    lines.push({ text: field('No', transaction.generated_no || transaction.order_no || '-', columns), bold: false });
     lines.push({ text: field('Tanggal', transaction.transaction_time ? formatDateTime(transaction.transaction_time) : '-', columns), bold: false });
     lines.push({ text: field('Jam Masuk', transaction.entry_time ? formatDateTime(transaction.entry_time) : '-', columns), bold: false });
     lines.push({ text: field('No Meja', transaction.table_no || '-', columns), bold: false });
@@ -169,13 +169,13 @@ function foodcourtLines(transaction, columns, headerName) {
 
 function pastryBakeryLines(transaction, columns, headerName) {
     const lines = [
-        { text: headerName, align: 'center', bold: false, double: true },
+        { text: headerName, align: 'center', bold: false, double: false },
     ];
 
     lines.push({ text: dashedLine(columns) });
 
-    if (transaction.order_no) {
-        lines.push({ text: field('No', transaction.order_no, columns) });
+    if (transaction.generated_no || transaction.order_no) {
+        lines.push({ text: field('No', transaction.generated_no || transaction.order_no, columns) });
     }
 
     if (transaction.transaction_time) {
@@ -230,13 +230,17 @@ function pastryBakeryLines(transaction, columns, headerName) {
     totalsRows.push({ label: paymentLabel, value: formatAmount(transaction.payment_amount) });
 
     if (Number(transaction.change_amount) > 0) {
-        totalsRows.push({ label: 'Kembalian', value: formatAmount(transaction.change_amount) });
+        totalsRows.push({ label: 'Kembalian', value: formatAmount(transaction.change_amount), separatorBefore: true });
     }
 
     // Right-align every label to the same width so the ":" lines up down the column.
     const labelWidth = Math.max(...totalsRows.map((row) => row.label.length));
 
     totalsRows.forEach((row) => {
+        if (row.separatorBefore) {
+            lines.push({ text: '-'.repeat(22), align: 'right' });
+        }
+
         lines.push({
             text: indentedTwoSides(`${row.label.padStart(labelWidth)} :`, row.value, columns),
             indent: true,
@@ -253,13 +257,13 @@ function pastryBakeryLines(transaction, columns, headerName) {
 
 function cafe1912Lines(transaction, columns, headerName) {
     const lines = [
-        { text: headerName, align: 'center', bold: false, double: true },
+        { text: headerName, align: 'center', bold: false, double: false },
     ];
 
     lines.push({ text: dashedLine(columns) });
 
-    if (transaction.order_no) {
-        lines.push({ text: field('No', transaction.order_no, columns) });
+    if (transaction.generated_no || transaction.order_no) {
+        lines.push({ text: field('No', transaction.generated_no || transaction.order_no, columns) });
     }
 
     if (transaction.transaction_time) {
@@ -314,13 +318,17 @@ function cafe1912Lines(transaction, columns, headerName) {
     totalsRows.push({ label: paymentLabel, value: formatAmount(transaction.payment_amount) });
 
     if (Number(transaction.change_amount) > 0) {
-        totalsRows.push({ label: 'Kembalian', value: formatAmount(transaction.change_amount) });
+        totalsRows.push({ label: 'Kembalian', value: formatAmount(transaction.change_amount), separatorBefore: true });
     }
 
     // Right-align every label to the same width so the ":" lines up down the column.
     const labelWidth = Math.max(...totalsRows.map((row) => row.label.length));
 
     totalsRows.forEach((row) => {
+        if (row.separatorBefore) {
+            lines.push({ text: '-'.repeat(22), align: 'right' });
+        }
+
         lines.push({
             text: indentedTwoSides(`${row.label.padStart(labelWidth)} :`, row.value, columns),
             indent: true,
@@ -331,6 +339,12 @@ function cafe1912Lines(transaction, columns, headerName) {
 
     lines.push({ text: dashedLine(columns) });
     lines.push({ text: '- Thank You -', align: 'center' });
+
+    const queueNo = transaction.order_no ? String(transaction.order_no).slice(-2).padStart(2, '0') : '-';
+
+    lines.push({ text: 'Nomor antrian', align: 'center', bold: true, tall: true });
+    lines.push({ text: queueNo, align: 'center', bold: true, size: 3 });
+    lines.push({ text: 'Tunggu nomor kamu dipanggil', align: 'center' });
 
     return lines;
 }
@@ -398,7 +412,11 @@ export function buildReceiptBytes(transaction, options = {}) {
             continue;
         }
 
-        if (line.double) {
+        if (line.size) {
+            // GS ! n: low nibble = height multiplier - 1, high nibble = width multiplier - 1.
+            const magnification = Math.max(1, line.size) - 1;
+            bytes.push(GS, 0x21, (magnification << 4) | magnification);
+        } else if (line.double) {
             bytes.push(GS, 0x21, 0x11);
         } else if (line.tall) {
             // Double height only (not width), so the label + right-aligned value still fit the paper width.
@@ -422,7 +440,7 @@ export function buildReceiptBytes(transaction, options = {}) {
         bytes.push(ESC, 0x45, 0);
         bytes.push(ESC, 0x61, 0);
 
-        if (line.double || line.tall) {
+        if (line.size || line.double || line.tall) {
             bytes.push(GS, 0x21, 0x00);
         }
     }
