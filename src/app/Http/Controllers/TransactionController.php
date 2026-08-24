@@ -60,7 +60,7 @@ class TransactionController extends Controller
                 'total' => $total,
                 'payment_amount' => $paymentAmount,
                 'change_amount' => $paymentAmount - $total,
-                'payment_method' => 'cash',
+                'payment_method' => $request->input('payment_method') ?: 'CASH',
                 'transaction_time' => $request->date('transaction_time') ?? now(),
                 'entry_time' => $request->date('entry_time'),
             ]);

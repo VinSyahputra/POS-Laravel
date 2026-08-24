@@ -356,11 +356,8 @@ document.addEventListener('alpine:init', () => {
             return this.cart.reduce((sum, item) => sum + item.qty * item.price, 0);
         },
 
-        discount: 0,
-        tax: 0,
         paymentAmount: '',
         cashierName: '',
-        showPayment: false,
         cartExpanded: false,
         submitting: false,
         lastTransaction: null,
@@ -399,7 +396,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         get total() {
-            return Math.max(0, this.cartSubtotal - (Number(this.discount) || 0)) + (Number(this.tax) || 0);
+            return this.cartSubtotal;
         },
 
         get changeAmount() {
@@ -412,18 +409,6 @@ document.addEventListener('alpine:init', () => {
             return this.cart.length > 0 && (Number(this.paymentAmount) || 0) >= this.total && !this.submitting;
         },
 
-        quickCash(amount) {
-            this.paymentAmount = amount;
-        },
-
-        openPayment() {
-            this.discount = 0;
-            this.tax = 0;
-            this.paymentAmount = '';
-            this.showPayment = true;
-            this.cartExpanded = true;
-        },
-
         async submitTransaction() {
             if (!this.canSubmit) {
                 return;
@@ -433,9 +418,8 @@ document.addEventListener('alpine:init', () => {
             try {
                 const payload = {
                     items: this.cart.map((item) => ({ menu_id: item.menu_id, qty: item.qty })),
-                    discount: Number(this.discount) || 0,
-                    tax: Number(this.tax) || 0,
                     payment_amount: Number(this.paymentAmount) || 0,
+                    payment_method: 'CASH',
                     cashier_name: this.cashierName || null,
                     order_no: this.orderNo || null,
                     template: this.template || null,
@@ -450,10 +434,7 @@ document.addEventListener('alpine:init', () => {
                 });
                 this.lastTransaction = response.data;
                 this.cart = [];
-                this.showPayment = false;
                 this.paymentAmount = '';
-                this.discount = 0;
-                this.tax = 0;
                 this.resetOrderFields();
                 this.$nextTick(() => this.$store.printing.printReceipt(this.lastTransaction));
             } catch (e) {

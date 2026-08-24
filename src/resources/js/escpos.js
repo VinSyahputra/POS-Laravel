@@ -2,6 +2,12 @@ const COLUMNS = { '58mm': 32, '80mm': 48 };
 const ESC = 0x1b;
 const GS = 0x1d;
 
+const TEMPLATE_LABELS = {
+    PASTRY_BAKERY: 'Pastry & Bakery',
+    FOODCOURT: 'Foodcourt',
+    CAFE_1912: 'Cafe 1912',
+};
+
 const formatAmount = (value) => Number(value || 0).toLocaleString('id-ID');
 
 const padCenter = (text, columns) => {
@@ -54,6 +60,19 @@ const wrapText = (text, columns) => {
 
 const dashedLine = (columns) => '-'.repeat(columns);
 
+// Many cheap ESC/POS clone printers silently strip leading space characters,
+// so the totals block indent is sent as a real tab stop (see buildReceiptBytes)
+// rather than baked-in spaces. This only reserves the column budget for it.
+const TOTALS_INDENT_WIDTH = 6;
+
+const indentedTwoSides = (left, right, columns) => {
+    const available = Math.max(0, columns - TOTALS_INDENT_WIDTH);
+
+    return twoSides(left, right, available).slice(0, available);
+};
+
+const field = (label, value, columns) => `${label.padEnd(10)}: ${value}`.slice(0, columns);
+
 const formatDateTime = (isoString) => {
     const date = new Date(isoString);
 
@@ -64,66 +83,86 @@ const formatDateTime = (isoString) => {
 
 export function receiptLines(transaction, { outletName = 'POS Food Court', paperWidth = '80mm' } = {}) {
     const columns = COLUMNS[paperWidth] ?? 48;
+    const headerName = TEMPLATE_LABELS[transaction.template] ?? outletName;
     const lines = [
-        { text: outletName.toUpperCase(), align: 'center', bold: true, double: true },
+        { text: headerName, align: 'center', bold: true, double: true },
     ];
 
     lines.push({ text: dashedLine(columns) });
-    lines.push({ text: transaction.receipt_number, align: 'center' });
-    lines.push({ text: formatDateTime(transaction.transaction_time), align: 'center' });
 
     if (transaction.order_no) {
-        lines.push({ text: `No    : ${transaction.order_no}`.slice(0, columns) });
+        lines.push({ text: field('No', transaction.order_no, columns) });
     }
 
-    if (transaction.mode) {
-        lines.push({ text: `Mode  : ${transaction.mode}`.slice(0, columns) });
-    }
-
-    if (transaction.table_no) {
-        lines.push({ text: `Meja  : ${transaction.table_no}`.slice(0, columns) });
+    if (transaction.transaction_time) {
+        lines.push({ text: field('Tanggal', formatDateTime(transaction.transaction_time), columns) });
     }
 
     if (transaction.entry_time) {
-        lines.push({ text: `Masuk : ${formatDateTime(transaction.entry_time)}`.slice(0, columns) });
+        lines.push({ text: field('Jam Masuk', formatDateTime(transaction.entry_time), columns) });
+    }
+
+    if (transaction.table_no) {
+        lines.push({ text: field('No Meja', transaction.table_no, columns) });
+    }
+
+    if (transaction.mode) {
+        lines.push({ text: field('Mode', transaction.mode, columns) });
     }
 
     if (transaction.cashier_name) {
-        lines.push({ text: `Kasir : ${transaction.cashier_name}`.slice(0, columns) });
+        lines.push({ text: field('Kasir', transaction.cashier_name, columns) });
     }
 
     lines.push({ text: dashedLine(columns) });
 
-    for (const item of transaction.items ?? []) {
+    const items = transaction.items ?? [];
+
+    for (const item of items) {
         const nameLines = wrapText(item.menu_name, columns);
-        nameLines.forEach((nameLine, index) => {
-            if (index === 0) {
-                lines.push({ text: nameLine });
-            } else {
-                lines.push({ text: nameLine });
-            }
-        });
+        nameLines.forEach((nameLine) => lines.push({ text: nameLine, bold: true }));
         lines.push({
-            text: twoSides(`  ${item.qty} x ${formatAmount(item.price)}`, formatAmount(item.subtotal), columns),
+            text: twoSides(`${item.qty}x @${formatAmount(item.price)}`, formatAmount(item.subtotal), columns),
         });
     }
 
     lines.push({ text: dashedLine(columns) });
-    lines.push({ text: twoSides('Subtotal', formatAmount(transaction.subtotal), columns) });
+
+    const itemCount = items.reduce((sum, item) => sum + (Number(item.qty) || 0), 0);
+    lines.push({ text: `${itemCount} item` });
+
+    const paymentLabel = String(transaction.payment_method || 'CASH').toUpperCase();
+    const totalsRows = [{ label: 'Subtotal', value: formatAmount(transaction.subtotal) }];
 
     if (Number(transaction.discount) > 0) {
-        lines.push({ text: twoSides('Diskon', '-' + formatAmount(transaction.discount), columns) });
+        totalsRows.push({ label: 'Diskon', value: '-' + formatAmount(transaction.discount) });
     }
 
     if (Number(transaction.tax) > 0) {
-        lines.push({ text: twoSides('Pajak', formatAmount(transaction.tax), columns) });
+        totalsRows.push({ label: 'Pajak', value: formatAmount(transaction.tax) });
     }
 
-    lines.push({ text: twoSides('TOTAL', formatAmount(transaction.total), columns), bold: true });
-    lines.push({ text: twoSides('Tunai', formatAmount(transaction.payment_amount), columns) });
-    lines.push({ text: twoSides('Kembalian', formatAmount(transaction.change_amount), columns) });
+    totalsRows.push({ label: 'Grand Total', value: formatAmount(transaction.total), bold: true, tall: true });
+    totalsRows.push({ label: paymentLabel, value: formatAmount(transaction.payment_amount) });
+
+    if (Number(transaction.change_amount) > 0) {
+        totalsRows.push({ label: 'Kembalian', value: formatAmount(transaction.change_amount) });
+    }
+
+    // Right-align every label to the same width so the ":" lines up down the column.
+    const labelWidth = Math.max(...totalsRows.map((row) => row.label.length));
+
+    totalsRows.forEach((row) => {
+        lines.push({
+            text: indentedTwoSides(`${row.label.padStart(labelWidth)} :`, row.value, columns),
+            indent: true,
+            bold: row.bold,
+            tall: row.tall,
+        });
+    });
+
     lines.push({ text: dashedLine(columns) });
-    lines.push({ text: 'Terima kasih atas kunjungan Anda!', align: 'center' });
+    lines.push({ text: '- Thank You -', align: 'center' });
 
     return { lines, columns };
 }
@@ -132,13 +171,21 @@ export function buildReceiptText(transaction, options = {}) {
     const { lines, columns } = receiptLines(transaction, options);
 
     return lines
-        .map((line) => (line.align === 'center' ? padCenter(line.text, columns) : line.text))
+        .map((line) => {
+            const text = line.indent ? ' '.repeat(TOTALS_INDENT_WIDTH) + line.text : line.text;
+
+            return line.align === 'center' ? padCenter(text, columns) : text;
+        })
         .join('\n');
 }
 
 export function buildReceiptBytes(transaction, options = {}) {
     const { lines } = receiptLines(transaction, options);
     const bytes = [ESC, 0x40];
+    // Register a real tab stop at the totals indent column: leading space characters
+    // get silently stripped by many cheap ESC/POS clone printers, but a proper tab
+    // command is reliably honored.
+    bytes.push(ESC, 0x44, TOTALS_INDENT_WIDTH, 0x00);
     const encoder = new TextEncoder();
     const pushText = (text) => {
         for (const byte of encoder.encode(text)) {
@@ -149,16 +196,24 @@ export function buildReceiptBytes(transaction, options = {}) {
     for (const line of lines) {
         if (line.double) {
             bytes.push(GS, 0x21, 0x11);
+        } else if (line.tall) {
+            // Double height only (not width), so the label + right-aligned value still fit the paper width.
+            bytes.push(GS, 0x21, 0x01);
         }
 
         bytes.push(ESC, 0x45, line.bold ? 1 : 0);
         bytes.push(ESC, 0x61, line.align === 'center' ? 1 : 0);
+
+        if (line.indent) {
+            bytes.push(0x09);
+        }
+
         pushText(line.text);
         bytes.push(0x0a);
         bytes.push(ESC, 0x45, 0);
         bytes.push(ESC, 0x61, 0);
 
-        if (line.double) {
+        if (line.double || line.tall) {
             bytes.push(GS, 0x21, 0x00);
         }
     }

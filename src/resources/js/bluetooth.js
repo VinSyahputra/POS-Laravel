@@ -7,6 +7,17 @@ const PRINTER_SERVICE_UUIDS = [
 let connectedDevice = null;
 let connectedCharacteristic = null;
 
+function attachDisconnectListener(device) {
+    if (!device || device.__posDisconnectHandlerAttached) {
+        return;
+    }
+
+    device.addEventListener('gattserverdisconnected', () => {
+        connectedCharacteristic = null;
+    });
+    device.__posDisconnectHandlerAttached = true;
+}
+
 export function isBluetoothSupported() {
     return typeof navigator !== 'undefined' && 'bluetooth' in navigator;
 }
@@ -32,6 +43,7 @@ export async function requestPrinter() {
     localStorage.setItem('pos_printer_name', device.name ?? '');
     connectedDevice = device;
     connectedCharacteristic = null;
+    attachDisconnectListener(connectedDevice);
 
     return device;
 }
@@ -48,6 +60,7 @@ export async function restorePairedPrinter() {
         if (printer) {
             connectedDevice = printer;
             connectedCharacteristic = null;
+            attachDisconnectListener(connectedDevice);
         }
 
         return printer;
@@ -75,19 +88,33 @@ async function findWritableCharacteristic(server) {
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function writeChunked(characteristic, bytes) {
-    const CHUNK_SIZE = 512;
+// Most cheap BLE thermal printers never negotiate a larger ATT MTU, so they only
+// reliably accept the default ~20-byte payload per write. Sending bigger chunks
+// overruns their receive buffer and makes the printer drop the connection mid-print.
+const CHUNK_SIZE = 20;
+const CHUNK_DELAY_MS = 20;
 
+async function writeChunk(chunk) {
+    if (connectedCharacteristic.properties.write) {
+        await connectedCharacteristic.writeValue(chunk);
+    } else {
+        await connectedCharacteristic.writeValueWithoutResponse(chunk);
+    }
+}
+
+async function writeChunked(bytes) {
     for (let offset = 0; offset < bytes.length; offset += CHUNK_SIZE) {
         const chunk = bytes.slice(offset, offset + CHUNK_SIZE);
 
-        if (characteristic.properties.write) {
-            await characteristic.writeValue(chunk);
-        } else {
-            await characteristic.writeValueWithoutResponse(chunk);
+        try {
+            await writeChunk(chunk);
+        } catch (error) {
+            // Printer dropped the connection mid-print; reconnect and resend just this chunk.
+            await connectPrinter();
+            await writeChunk(chunk);
         }
 
-        await delay(24);
+        await delay(CHUNK_DELAY_MS);
     }
 }
 
@@ -112,12 +139,27 @@ export async function connectPrinter() {
     return characteristic;
 }
 
-export async function writeBytes(bytes) {
-    if (!connectedCharacteristic) {
-        await connectPrinter();
+export async function ensurePrinterConnection() {
+    if (!connectedDevice) {
+        const restored = await restorePairedPrinter();
+
+        if (!restored) {
+            // No printer remembered in this session yet: ask the user to pick one now.
+            await requestPrinter();
+        }
     }
 
-    await writeChunked(connectedCharacteristic, new Uint8Array(bytes));
+    if (!connectedCharacteristic || !connectedDevice?.gatt?.connected) {
+        await connectPrinter();
+    }
+}
+
+export async function writeBytes(bytes) {
+    const payload = new Uint8Array(bytes);
+
+    await ensurePrinterConnection();
+
+    await writeChunked(payload);
 
     return true;
 }

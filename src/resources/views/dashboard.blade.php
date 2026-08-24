@@ -96,8 +96,8 @@
                     </div>
                 </div>
 
-                <aside class="mb-4 flex w-full shrink-0 flex-col rounded-2xl bg-white shadow lg:mb-0 lg:w-96"
-                    :class="showPayment || lastTransaction || cartExpanded ? '' : 'max-h-[55vh] self-end overflow-hidden lg:max-h-none lg:self-auto'">
+                <aside class="mb-4 flex w-full shrink-0 flex-col rounded-2xl bg-white shadow lg:mb-0 lg:w-80"
+                    :class="lastTransaction || cartExpanded ? '' : 'max-h-[55vh] self-end overflow-hidden lg:max-h-none lg:self-auto'">
                     <button @click="cartExpanded = !cartExpanded"
                         class="flex items-center justify-between border-b border-slate-100 px-5 py-4 lg:hidden">
                         <span class="flex items-center gap-2 text-lg font-bold">
@@ -112,18 +112,11 @@
                         </span>
                     </button>
 
-                    <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4"
-                        :class="cartExpanded ? '' : 'hidden lg:flex'">
-                        <h2 class="text-lg font-bold">Keranjang
-                            <span x-show="cartCount > 0" x-cloak
-                                class="ml-1 rounded-full bg-orange-500 px-2.5 py-0.5 text-xs font-bold text-white"
-                                x-text="cartCount"></span>
-                        </h2>
-                        <button x-show="cart.length > 0" @click="clearCart()" x-cloak
-                            class="rounded-lg bg-red-100 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-200">Kosongkan</button>
+                    <div class="hidden items-center justify-between border-b border-slate-100 px-5 py-4 lg:flex">
+                        <h2 class="text-lg font-bold">Detail Pesanan</h2>
                     </div>
 
-                    <div class="border-b border-slate-100 px-5 py-4">
+                    <div class="border-b border-slate-100 px-5 py-4" :class="cartExpanded ? '' : 'hidden lg:block'">
                         <div class="grid grid-cols-2 gap-3">
                             <div class="col-span-2">
                                 <label class="mb-1 block text-xs font-semibold text-slate-500">Template</label>
@@ -176,7 +169,44 @@
                         </div>
                     </div>
 
-                    <div class="flex-1 overflow-y-auto px-5 py-4" :class="cartExpanded ? '' : 'hidden lg:block'">
+                    <div class="px-5 py-4" :class="cartExpanded ? '' : 'hidden lg:block'">
+                        <div>
+                            <label class="mb-1 block text-xs font-semibold text-slate-500">Dibayar (Rp)</label>
+                            <input type="number" x-model.number="paymentAmount" min="0" step="1" placeholder="0"
+                                class="w-full rounded-xl border border-slate-300 px-3 py-3 text-base font-bold focus:border-orange-500 focus:outline-none">
+                        </div>
+
+                        <div class="mt-3 flex items-center justify-between rounded-xl bg-green-50 px-4 py-3">
+                            <span class="text-sm font-semibold text-green-700">Kembalian</span>
+                            <span class="text-lg font-extrabold text-green-700" x-text="'Rp ' + rupiah(changeAmount)"></span>
+                        </div>
+
+                        <div class="mt-3 flex items-center justify-between text-lg font-extrabold">
+                            <span>Subtotal</span>
+                            <span x-text="'Rp ' + rupiah(cartSubtotal)"></span>
+                        </div>
+
+                        <div class="mt-4">
+                            <button @click="submitTransaction()" :disabled="!canSubmit"
+                                class="w-full rounded-xl bg-orange-500 px-5 py-4 text-base font-bold text-white shadow hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-slate-300"
+                                x-text="submitting ? 'Menyimpan…' : '🖨️ Cetak'"></button>
+                        </div>
+                    </div>
+                </aside>
+
+                <aside class="mb-4 flex w-full shrink-0 flex-col rounded-2xl bg-white shadow lg:mb-0 lg:w-80"
+                    :class="lastTransaction || cartExpanded ? '' : 'hidden lg:flex'">
+                    <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+                        <h2 class="text-lg font-bold">Item Dipilih
+                            <span x-show="cartCount > 0" x-cloak
+                                class="ml-1 rounded-full bg-orange-500 px-2.5 py-0.5 text-xs font-bold text-white"
+                                x-text="cartCount"></span>
+                        </h2>
+                        <button x-show="cart.length > 0" @click="clearCart()" x-cloak
+                            class="rounded-lg bg-red-100 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-200">Kosongkan</button>
+                    </div>
+
+                    <div class="flex-1 overflow-y-auto px-5 py-4">
                         <template x-if="cart.length === 0">
                             <p class="py-10 text-center text-sm text-slate-400">Klik menu di sebelah kiri untuk menambah item.</p>
                         </template>
@@ -209,69 +239,6 @@
                                     </div>
                                 </div>
                             </template>
-                        </div>
-                    </div>
-
-                    <div class="border-t border-slate-100 px-5 py-4" :class="cartExpanded || showPayment ? '' : 'hidden lg:block'">
-                        <div class="flex items-center justify-between text-lg font-extrabold">
-                            <span>Subtotal</span>
-                            <span x-text="'Rp ' + rupiah(cartSubtotal)"></span>
-                        </div>
-
-                        <div x-show="!showPayment" class="mt-4">
-                            <button @click="openPayment()" :disabled="cart.length === 0"
-                                class="w-full rounded-xl bg-orange-500 px-5 py-4 text-base font-bold text-white shadow hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-slate-300">
-                                🖨️ Cetak
-                            </button>
-                        </div>
-
-                        <div x-show="showPayment" x-cloak class="mt-4 space-y-3">
-                            <div class="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label class="mb-1 block text-xs font-semibold text-slate-500">Diskon (Rp)</label>
-                                    <input type="number" x-model.number="discount" min="0" step="1"
-                                        class="w-full rounded-xl border border-slate-300 px-3 py-3 text-sm focus:border-orange-500 focus:outline-none">
-                                </div>
-                                <div>
-                                    <label class="mb-1 block text-xs font-semibold text-slate-500">Pajak (Rp)</label>
-                                    <input type="number" x-model.number="tax" min="0" step="1"
-                                        class="w-full rounded-xl border border-slate-300 px-3 py-3 text-sm focus:border-orange-500 focus:outline-none">
-                                </div>
-                            </div>
-
-                            <div class="rounded-xl bg-slate-50 p-3 text-sm">
-                                <div class="flex justify-between text-slate-500"><span>Subtotal</span><span x-text="'Rp ' + rupiah(cartSubtotal)"></span></div>
-                                <div class="flex justify-between text-slate-500"><span>Diskon</span><span x-text="'-Rp ' + rupiah(discount)"></span></div>
-                                <div class="flex justify-between text-slate-500"><span>Pajak</span><span x-text="'Rp ' + rupiah(tax)"></span></div>
-                                <div class="mt-1 flex justify-between border-t border-slate-200 pt-2 text-base font-extrabold">
-                                    <span>Total</span><span x-text="'Rp ' + rupiah(total)"></span>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label class="mb-1 block text-xs font-semibold text-slate-500">Dibayar (Rp)</label>
-                                <input type="number" x-model.number="paymentAmount" min="0" step="1" placeholder="0"
-                                    class="w-full rounded-xl border border-slate-300 px-3 py-3 text-base font-bold focus:border-orange-500 focus:outline-none">
-                                <div class="mt-2 flex flex-wrap gap-2">
-                                    <button @click="quickCash(total)" class="rounded-lg bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-200">Uang Pas</button>
-                                    <button @click="quickCash(50000)" class="rounded-lg bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-200">50rb</button>
-                                    <button @click="quickCash(100000)" class="rounded-lg bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-200">100rb</button>
-                                    <button @click="quickCash(150000)" class="rounded-lg bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-200">150rb</button>
-                                </div>
-                            </div>
-
-                            <div class="flex items-center justify-between rounded-xl bg-green-50 px-4 py-3">
-                                <span class="text-sm font-semibold text-green-700">Kembalian</span>
-                                <span class="text-lg font-extrabold text-green-700" x-text="'Rp ' + rupiah(changeAmount)"></span>
-                            </div>
-
-                            <div class="flex gap-3">
-                                <button @click="showPayment = false"
-                                    class="flex-1 rounded-xl bg-slate-200 px-5 py-4 text-sm font-bold text-slate-600">Batal</button>
-                                <button @click="submitTransaction()" :disabled="!canSubmit"
-                                    class="flex-[2] rounded-xl bg-green-600 px-5 py-4 text-base font-bold text-white shadow hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-slate-300"
-                                    x-text="submitting ? 'Menyimpan…' : 'Simpan & Cetak Nota'"></button>
-                            </div>
                         </div>
                     </div>
                 </aside>

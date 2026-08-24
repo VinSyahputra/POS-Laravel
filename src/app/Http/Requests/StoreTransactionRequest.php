@@ -24,6 +24,7 @@ class StoreTransactionRequest extends FormRequest
             'discount' => ['nullable', 'integer', 'min:0'],
             'tax' => ['nullable', 'integer', 'min:0'],
             'payment_amount' => ['required', 'integer', 'min:0'],
+            'payment_method' => ['nullable', 'string', 'max:30'],
             'cashier_name' => ['nullable', 'string', 'max:100'],
             'order_no' => ['nullable', 'string', 'max:50'],
             'template' => ['nullable', Rule::enum(Template::class)],
