@@ -79,7 +79,7 @@ const indentedTwoSides = (left, right, columns) => {
     return twoSides(left, right, available).slice(0, available);
 };
 
-const field = (label, value, columns) => `${label.padEnd(10)}: ${value}`.slice(0, columns);
+const field = (label, value, columns) => `${label.padEnd(10)} : ${value}`.slice(0, columns);
 
 const formatDateTime = (isoString) => {
     const date = new Date(isoString);
@@ -89,23 +89,24 @@ const formatDateTime = (isoString) => {
     return `${pad(date.getDate())}-${pad(date.getMonth() + 1)}-${date.getFullYear()} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 };
 
-export function receiptLines(transaction, { outletName = 'POS Food Court', paperWidth = '80mm' } = {}) {
-    const columns = COLUMNS[paperWidth] ?? 48;
-    const headerName = TEMPLATE_LABELS[transaction.template] ?? outletName;
-    const isFoodcourt = transaction.template === 'FOODCOURT';
+// Each template below builds its own line array from scratch (some duplication
+// vs. one shared builder is intentional) so tweaking one template's layout can
+// never leak into the other two.
+
+function foodcourtLines(transaction, columns, headerName) {
     const lines = [
-        { text: headerName, align: 'center', bold: false, double: !isFoodcourt },
+        { text: headerName, align: 'center', bold: false, double: false },
     ];
 
     lines.push({ text: dashedLine(columns) });
     lines.push({ feed: 4 });
 
-    lines.push({ text: ' ' + field('No', transaction.order_no || '-', columns), bold: false });
-    lines.push({ text: ' ' + field('Tanggal', transaction.transaction_time ? formatDateTime(transaction.transaction_time) : '-', columns), bold: false });
-    lines.push({ text: ' ' + field('Jam Masuk', transaction.entry_time ? formatDateTime(transaction.entry_time) : '-', columns), bold: false });
-    lines.push({ text: ' ' + field('No Meja', transaction.table_no || '-', columns), bold: false });
-    lines.push({ text: ' ' + field('Mode', transaction.mode || '-', columns), bold: false });
-    lines.push({ text: ' ' + field('Kasir', transaction.cashier_name || '-', columns), bold: false });
+    lines.push({ text: field('No', transaction.order_no || '-', columns), bold: false });
+    lines.push({ text: field('Tanggal', transaction.transaction_time ? formatDateTime(transaction.transaction_time) : '-', columns), bold: false });
+    lines.push({ text: field('Jam Masuk', transaction.entry_time ? formatDateTime(transaction.entry_time) : '-', columns), bold: false });
+    lines.push({ text: field('No Meja', transaction.table_no || '-', columns), bold: false });
+    lines.push({ text: field('Mode', transaction.mode || '-', columns), bold: false });
+    lines.push({ text: field('Kasir', transaction.cashier_name || '-', columns), bold: false });
 
     lines.push({ text: dashedLine(columns) });
     lines.push({ feed: 4 });
@@ -163,7 +164,189 @@ export function receiptLines(transaction, { outletName = 'POS Food Court', paper
     lines.push({ text: dashedLine(columns) });
     lines.push({ text: '- Thank You -', align: 'center' });
 
-    return { lines, columns };
+    return lines;
+}
+
+function pastryBakeryLines(transaction, columns, headerName) {
+    const lines = [
+        { text: headerName, align: 'center', bold: false, double: true },
+    ];
+
+    lines.push({ text: dashedLine(columns) });
+
+    if (transaction.order_no) {
+        lines.push({ text: field('No', transaction.order_no, columns) });
+    }
+
+    if (transaction.transaction_time) {
+        lines.push({ text: field('Tanggal', formatDateTime(transaction.transaction_time), columns) });
+    }
+
+    if (transaction.entry_time) {
+        lines.push({ text: field('Jam Masuk', formatDateTime(transaction.entry_time), columns) });
+    }
+
+    if (transaction.table_no) {
+        lines.push({ text: field('No Meja', transaction.table_no, columns) });
+    }
+
+    if (transaction.mode) {
+        lines.push({ text: field('Mode', transaction.mode, columns) });
+    }
+
+    if (transaction.cashier_name) {
+        lines.push({ text: field('Kasir', transaction.cashier_name, columns) });
+    }
+
+    lines.push({ text: dashedLine(columns) });
+
+    const items = transaction.items ?? [];
+
+    for (const item of items) {
+        const nameLines = wrapText(item.menu_name, columns);
+        nameLines.forEach((nameLine) => lines.push({ text: nameLine, bold: true }));
+        lines.push({
+            text: twoSides(`${item.qty}x @${formatAmount(item.price)}`, formatAmount(item.subtotal), columns),
+        });
+    }
+
+    lines.push({ text: dashedLine(columns) });
+
+    const itemCount = items.reduce((sum, item) => sum + (Number(item.qty) || 0), 0);
+    lines.push({ text: `${itemCount} item` });
+
+    const paymentLabel = String(transaction.payment_method || 'CASH').toUpperCase();
+    const totalsRows = [{ label: 'Subtotal', value: formatAmount(transaction.subtotal) }];
+
+    if (Number(transaction.discount) > 0) {
+        totalsRows.push({ label: 'Diskon', value: '-' + formatAmount(transaction.discount) });
+    }
+
+    if (Number(transaction.tax) > 0) {
+        totalsRows.push({ label: 'Pajak', value: formatAmount(transaction.tax) });
+    }
+
+    totalsRows.push({ label: 'Grand Total', value: formatAmount(transaction.total), bold: true, tall: true });
+    totalsRows.push({ label: paymentLabel, value: formatAmount(transaction.payment_amount) });
+
+    if (Number(transaction.change_amount) > 0) {
+        totalsRows.push({ label: 'Kembalian', value: formatAmount(transaction.change_amount) });
+    }
+
+    // Right-align every label to the same width so the ":" lines up down the column.
+    const labelWidth = Math.max(...totalsRows.map((row) => row.label.length));
+
+    totalsRows.forEach((row) => {
+        lines.push({
+            text: indentedTwoSides(`${row.label.padStart(labelWidth)} :`, row.value, columns),
+            indent: true,
+            bold: row.bold,
+            tall: row.tall,
+        });
+    });
+
+    lines.push({ text: dashedLine(columns) });
+    lines.push({ text: '- Thank You -', align: 'center' });
+
+    return lines;
+}
+
+function cafe1912Lines(transaction, columns, headerName) {
+    const lines = [
+        { text: headerName, align: 'center', bold: false, double: true },
+    ];
+
+    lines.push({ text: dashedLine(columns) });
+
+    if (transaction.order_no) {
+        lines.push({ text: field('No', transaction.order_no, columns) });
+    }
+
+    if (transaction.transaction_time) {
+        lines.push({ text: field('Tanggal', formatDateTime(transaction.transaction_time), columns) });
+    }
+
+    if (transaction.entry_time) {
+        lines.push({ text: field('Jam Masuk', formatDateTime(transaction.entry_time), columns) });
+    }
+
+    if (transaction.table_no) {
+        lines.push({ text: field('No Meja', transaction.table_no, columns) });
+    }
+
+    if (transaction.mode) {
+        lines.push({ text: field('Mode', transaction.mode, columns) });
+    }
+
+    if (transaction.cashier_name) {
+        lines.push({ text: field('Kasir', transaction.cashier_name, columns) });
+    }
+
+    lines.push({ text: dashedLine(columns) });
+
+    const items = transaction.items ?? [];
+
+    for (const item of items) {
+        const nameLines = wrapText(item.menu_name, columns);
+        nameLines.forEach((nameLine) => lines.push({ text: nameLine, bold: true }));
+        lines.push({
+            text: twoSides(`${item.qty}x @${formatAmount(item.price)}`, formatAmount(item.subtotal), columns),
+        });
+    }
+
+    lines.push({ text: dashedLine(columns) });
+
+    const itemCount = items.reduce((sum, item) => sum + (Number(item.qty) || 0), 0);
+    lines.push({ text: `${itemCount} item` });
+
+    const paymentLabel = String(transaction.payment_method || 'CASH').toUpperCase();
+    const totalsRows = [{ label: 'Subtotal', value: formatAmount(transaction.subtotal) }];
+
+    if (Number(transaction.discount) > 0) {
+        totalsRows.push({ label: 'Diskon', value: '-' + formatAmount(transaction.discount) });
+    }
+
+    if (Number(transaction.tax) > 0) {
+        totalsRows.push({ label: 'Pajak', value: formatAmount(transaction.tax) });
+    }
+
+    totalsRows.push({ label: 'Grand Total', value: formatAmount(transaction.total), bold: true, tall: true });
+    totalsRows.push({ label: paymentLabel, value: formatAmount(transaction.payment_amount) });
+
+    if (Number(transaction.change_amount) > 0) {
+        totalsRows.push({ label: 'Kembalian', value: formatAmount(transaction.change_amount) });
+    }
+
+    // Right-align every label to the same width so the ":" lines up down the column.
+    const labelWidth = Math.max(...totalsRows.map((row) => row.label.length));
+
+    totalsRows.forEach((row) => {
+        lines.push({
+            text: indentedTwoSides(`${row.label.padStart(labelWidth)} :`, row.value, columns),
+            indent: true,
+            bold: row.bold,
+            tall: row.tall,
+        });
+    });
+
+    lines.push({ text: dashedLine(columns) });
+    lines.push({ text: '- Thank You -', align: 'center' });
+
+    return lines;
+}
+
+const TEMPLATE_BUILDERS = {
+    FOODCOURT: foodcourtLines,
+    PASTRY_BAKERY: pastryBakeryLines,
+    CAFE_1912: cafe1912Lines,
+};
+
+export function receiptLines(transaction, { outletName = 'POS Food Court', paperWidth = '80mm' } = {}) {
+    const columns = COLUMNS[paperWidth] ?? 48;
+    const headerName = TEMPLATE_LABELS[transaction.template] ?? outletName;
+    const builder = TEMPLATE_BUILDERS[transaction.template] ?? pastryBakeryLines;
+
+    return { lines: builder(transaction, columns, headerName), columns };
 }
 
 export function buildReceiptText(transaction, options = {}) {
@@ -187,8 +370,14 @@ export function buildReceiptText(transaction, options = {}) {
         .join('\n');
 }
 
+// Foodcourt-only: extra paper feed appended after every printed line's normal
+// line feed, so consecutive rows sit a bit further apart without touching the
+// printer's default line-spacing register.
+const FOODCOURT_EXTRA_LINE_FEED = 1;
+
 export function buildReceiptBytes(transaction, options = {}) {
     const { lines } = receiptLines(transaction, options);
+    const extraLineFeed = transaction.template === 'FOODCOURT' ? FOODCOURT_EXTRA_LINE_FEED : 0;
     const bytes = [ESC, 0x40];
     // Register a real tab stop at the totals indent column: leading space characters
     // get silently stripped by many cheap ESC/POS clone printers, but a proper tab
@@ -225,6 +414,11 @@ export function buildReceiptBytes(transaction, options = {}) {
 
         pushText(line.text);
         bytes.push(0x0a);
+
+        if (extraLineFeed) {
+            bytes.push(ESC, 0x4a, extraLineFeed);
+        }
+
         bytes.push(ESC, 0x45, 0);
         bytes.push(ESC, 0x61, 0);
 
