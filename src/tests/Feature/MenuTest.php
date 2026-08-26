@@ -27,6 +27,33 @@ it('filters menus by category', function () {
         ->and($response[0]['category_id'])->toBe($minuman->id);
 });
 
+it('searches menus by name case-insensitively', function () {
+    Menu::factory()->create(['name' => 'Nasi Goreng Spesial']);
+    Menu::factory()->create(['name' => 'Mie Goreng']);
+    Menu::factory()->create(['name' => 'Es Teh']);
+
+    $response = $this->getJson('/menus?search=goreng')
+        ->assertSuccessful()
+        ->json('data');
+
+    expect($response)->toHaveCount(2)
+        ->and(collect($response)->pluck('name')->sort()->values()->all())->toBe(['Mie Goreng', 'Nasi Goreng Spesial']);
+});
+
+it('combines search with category filter', function () {
+    $makanan = Category::factory()->create();
+    $minuman = Category::factory()->create();
+    Menu::factory()->create(['name' => 'Es Jeruk', 'category_id' => $minuman->id]);
+    Menu::factory()->create(['name' => 'Es Krim', 'category_id' => $makanan->id]);
+
+    $response = $this->getJson("/menus?search=es&category_id={$minuman->id}")
+        ->assertSuccessful()
+        ->json('data');
+
+    expect($response)->toHaveCount(1)
+        ->and($response[0]['name'])->toBe('Es Jeruk');
+});
+
 it('creates a menu with integer price', function () {
     $category = Category::factory()->create();
 

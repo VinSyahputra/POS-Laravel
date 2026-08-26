@@ -64,7 +64,23 @@
                         <div class="mb-4 rounded-xl bg-red-100 px-4 py-3 text-sm font-medium text-red-700" x-text="error"></div>
                     </template>
 
-                    <div class="flex flex-wrap gap-2">
+                    <div class="relative">
+                        <span class="pointer-events-none absolute inset-y-0 left-4 flex items-center text-slate-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
+                            </svg>
+                        </span>
+                        <input type="text" x-model.debounce.300ms="search" placeholder="Cari menu makanan…"
+                            class="w-full rounded-xl border border-slate-200 bg-white py-3.5 pl-12 pr-10 text-sm font-semibold shadow placeholder:font-normal placeholder:text-slate-400 focus:border-orange-500 focus:outline-none">
+                        <button x-show="search" @click="search = ''" x-cloak
+                            class="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-slate-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="mt-4 flex flex-wrap gap-2">
                         <button @click="filterCategoryId = ''"
                             :class="filterCategoryId === '' ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 shadow'"
                             class="rounded-xl px-5 py-3 text-sm font-semibold">Semua</button>
@@ -80,7 +96,7 @@
                             <div class="col-span-full py-10 text-center text-slate-400">Memuat menu…</div>
                         </template>
                         <template x-if="!loading && filteredMenus.length === 0">
-                            <div class="col-span-full py-10 text-center text-slate-400">Belum ada menu pada kategori ini.</div>
+                            <div class="col-span-full py-10 text-center text-slate-400">Tidak ada menu yang cocok.</div>
                         </template>
                         <template x-for="menu in filteredMenus" :key="menu.id">
                             <button @click="addToCart(menu)"
@@ -148,7 +164,7 @@
                             </div>
                             <div>
                                 <label class="mb-1 block text-xs font-semibold text-slate-500">Tanggal</label>
-                                <input type="datetime-local" x-model="orderDate"
+                                <input type="datetime-local" x-model="orderDate" @change="entryTime = orderDate"
                                     class="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm focus:border-orange-500 focus:outline-none">
                             </div>
                             <div>
@@ -358,6 +374,15 @@
                             class="rounded-xl bg-orange-500 px-5 py-3 text-sm font-semibold text-white shadow hover:bg-orange-600">
                             + Tambah Menu
                         </button>
+                        <div class="relative min-w-[220px] flex-1 sm:max-w-xs">
+                            <span class="pointer-events-none absolute inset-y-0 left-4 flex items-center text-slate-400">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
+                                </svg>
+                            </span>
+                            <input type="text" x-model.debounce.300ms="menuSearch" placeholder="Cari nama menu…"
+                                class="w-full rounded-xl border border-slate-300 py-3 pl-12 pr-4 text-sm focus:border-orange-500 focus:outline-none">
+                        </div>
                         <select x-model.number="menuFilterCategoryId" @change="filterMenus()"
                             class="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm focus:border-orange-500 focus:outline-none">
                             <option value="">Semua Kategori</option>
@@ -382,7 +407,7 @@
                                     <tr><td colspan="4" class="px-6 py-8 text-center text-slate-400">Memuat…</td></tr>
                                 </template>
                                 <template x-if="!menusLoading && menus.length === 0">
-                                    <tr><td colspan="4" class="px-6 py-8 text-center text-slate-400">Belum ada menu.</td></tr>
+                                    <tr><td colspan="4" class="px-6 py-8 text-center text-slate-400">Tidak ada menu yang cocok.</td></tr>
                                 </template>
                                 <template x-for="menu in menus" :key="menu.id">
                                     <tr class="border-t border-slate-100">

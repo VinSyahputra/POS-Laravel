@@ -69,10 +69,12 @@ document.addEventListener('alpine:init', () => {
         showCategoryForm: false,
         categoryForm: { id: null, name: '' },
         menuFilterCategoryId: '',
+        menuSearch: '',
         showMenuForm: false,
         menuForm: { id: null, name: '', price: '', category_id: '' },
 
         async init() {
+            this.$watch('menuSearch', () => this.loadMenus());
             await Promise.all([this.loadCategories(), this.loadMenus()]);
         },
 
@@ -154,8 +156,18 @@ document.addEventListener('alpine:init', () => {
             this.menusLoading = true;
             this.error = null;
             try {
-                const query = this.menuFilterCategoryId ? `?category_id=${this.menuFilterCategoryId}` : '';
-                const data = await api(`/menus${query}`);
+                const params = new URLSearchParams();
+
+                if (this.menuFilterCategoryId) {
+                    params.set('category_id', this.menuFilterCategoryId);
+                }
+
+                if (this.menuSearch.trim()) {
+                    params.set('search', this.menuSearch.trim());
+                }
+
+                const query = params.toString();
+                const data = await api(`/menus${query ? `?${query}` : ''}`);
                 this.menus = data.data;
             } catch (e) {
                 this.error = e.message;
@@ -232,6 +244,7 @@ document.addEventListener('alpine:init', () => {
         categories: [],
         menus: [],
         filterCategoryId: '',
+        search: '',
         cart: [],
         loading: false,
         error: null,
@@ -265,11 +278,14 @@ document.addEventListener('alpine:init', () => {
         },
 
         get filteredMenus() {
-            if (!this.filterCategoryId) {
-                return this.menus;
-            }
+            const keyword = this.search.trim().toLowerCase();
 
-            return this.menus.filter((menu) => menu.category_id === this.filterCategoryId);
+            return this.menus.filter((menu) => {
+                const matchCategory = !this.filterCategoryId || menu.category_id === this.filterCategoryId;
+                const matchSearch = !keyword || menu.name.toLowerCase().includes(keyword);
+
+                return matchCategory && matchSearch;
+            });
         },
 
         rupiah(value) {
@@ -362,7 +378,7 @@ document.addEventListener('alpine:init', () => {
         submitting: false,
         lastTransaction: null,
         orderNo: '',
-        tableNo: '',
+        tableNo: 'Quick Service',
         mode: 'DINE IN',
         orderDate: '',
         entryTime: '',
@@ -388,7 +404,7 @@ document.addEventListener('alpine:init', () => {
             const now = new Date();
 
             this.orderNo = '';
-            this.tableNo = '';
+            this.tableNo = 'Quick Service';
             this.mode = 'DINE IN';
             this.template = 'FOODCOURT';
             this.orderDate = this.toLocalInputValue(now);
