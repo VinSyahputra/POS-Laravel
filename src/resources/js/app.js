@@ -1,5 +1,6 @@
 import Alpine from 'alpinejs';
 import './pos';
+import './generate-nota';
 
 window.Alpine = Alpine;
 
