@@ -16,29 +16,29 @@
         </button>
     </div>
 
-    <button @click="$store.ui.goToTab('cashier')"
+    <a href="/?tab=cashier" @click="$store.ui.goToTab('cashier', $event)"
         :class="$store.ui.isTabActive('cashier') ? 'bg-orange-500 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'"
         class="flex min-h-20 flex-col items-center justify-center gap-1 rounded-xl px-2 py-3 text-sm font-semibold transition">
         <span class="text-2xl">🧾</span> Kasir
-    </button>
+    </a>
 
-    <button @click="$store.ui.goToTab('menu')"
+    <a href="/?tab=menu" @click="$store.ui.goToTab('menu', $event)"
         :class="$store.ui.isTabActive('menu') ? 'bg-orange-500 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'"
         class="flex min-h-20 flex-col items-center justify-center gap-1 rounded-xl px-2 py-3 text-sm font-semibold transition">
         <span class="text-2xl">🍔</span> Menu
-    </button>
+    </a>
 
-    <button @click="$store.ui.goToTab('history')"
+    <a href="/?tab=history" @click="$store.ui.goToTab('history', $event)"
         :class="$store.ui.isTabActive('history') ? 'bg-orange-500 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'"
         class="flex min-h-20 flex-col items-center justify-center gap-1 rounded-xl px-2 py-3 text-sm font-semibold transition">
         <span class="text-2xl">🕘</span> Riwayat
-    </button>
+    </a>
 
-    <button @click="$store.ui.goToTab('settings')"
+    <a href="/?tab=settings" @click="$store.ui.goToTab('settings', $event)"
         :class="$store.ui.isTabActive('settings') ? 'bg-orange-500 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'"
         class="flex min-h-20 flex-col items-center justify-center gap-1 rounded-xl px-2 py-3 text-sm font-semibold transition">
         <span class="text-2xl">🖨️</span> Printer
-    </button>
+    </a>
 
     <a href="/generate-nota"
         class="flex min-h-20 flex-col items-center justify-center gap-1 rounded-xl px-2 py-3 text-sm font-semibold transition {{ request()->is('generate-nota') ? 'bg-orange-500 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700' }}">

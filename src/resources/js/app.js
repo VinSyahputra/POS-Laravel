@@ -9,14 +9,14 @@ document.addEventListener('alpine:init', () => {
         tab: new URLSearchParams(window.location.search).get('tab') || 'cashier',
         sidebarOpen: false,
 
-        goToTab(tab) {
+        goToTab(tab, event) {
             if (window.location.pathname === '/') {
+                event.preventDefault();
                 this.tab = tab;
                 this.sidebarOpen = false;
-                return;
             }
 
-            window.location.href = '/?tab=' + tab;
+            // di halaman lain, biarkan <a href="/?tab=..."> navigasi natural
         },
 
         isTabActive(tab) {
