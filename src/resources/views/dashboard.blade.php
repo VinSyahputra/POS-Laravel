@@ -390,6 +390,13 @@
                                 <option :value="category.id" x-text="category.name"></option>
                             </template>
                         </select>
+                        <select x-model="menuFilterTemplate" @change="filterMenus()"
+                            class="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm focus:border-orange-500 focus:outline-none">
+                            <option value="">Semua Outlet</option>
+                            <option value="FOODCOURT">Foodcourt</option>
+                            <option value="PASTRY_BAKERY">Pastry &amp; Bakery</option>
+                            <option value="CAFE_1912">Cafe 1912</option>
+                        </select>
                     </div>
 
                     <div class="overflow-x-auto rounded-2xl bg-white shadow">
@@ -398,16 +405,17 @@
                                 <tr>
                                     <th class="px-6 py-4">Nama Menu</th>
                                     <th class="px-6 py-4">Kategori</th>
+                                    <th class="px-6 py-4">Outlet</th>
                                     <th class="px-6 py-4">Harga</th>
                                     <th class="px-6 py-4 text-right">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <template x-if="menusLoading">
-                                    <tr><td colspan="4" class="px-6 py-8 text-center text-slate-400">Memuat…</td></tr>
+                                    <tr><td colspan="5" class="px-6 py-8 text-center text-slate-400">Memuat…</td></tr>
                                 </template>
                                 <template x-if="!menusLoading && menus.length === 0">
-                                    <tr><td colspan="4" class="px-6 py-8 text-center text-slate-400">Tidak ada menu yang cocok.</td></tr>
+                                    <tr><td colspan="5" class="px-6 py-8 text-center text-slate-400">Tidak ada menu yang cocok.</td></tr>
                                 </template>
                                 <template x-for="menu in menus" :key="menu.id">
                                     <tr class="border-t border-slate-100">
@@ -415,6 +423,10 @@
                                         <td class="px-6 py-4">
                                             <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600"
                                                 x-text="menu.category?.name ?? '-'"></span>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <span class="rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-600"
+                                                x-text="templateLabel(menu.template)"></span>
                                         </td>
                                         <td class="px-6 py-4 font-medium" x-text="'Rp ' + rupiah(menu.price)"></td>
                                         <td class="px-6 py-4 text-right">
@@ -452,6 +464,16 @@
                                     <label class="mb-1 block text-sm font-semibold text-slate-600">Harga (Rp)</label>
                                     <input type="number" x-model.number="menuForm.price" required min="0" step="1" placeholder="mis. 25000"
                                         class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm focus:border-orange-500 focus:outline-none">
+                                </div>
+                                <div>
+                                    <label class="mb-1 block text-sm font-semibold text-slate-600">Outlet</label>
+                                    <select x-model="menuForm.template"
+                                        class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm focus:border-orange-500 focus:outline-none">
+                                        <option value="">Tidak ditentukan</option>
+                                        <option value="FOODCOURT">Foodcourt</option>
+                                        <option value="PASTRY_BAKERY">Pastry &amp; Bakery</option>
+                                        <option value="CAFE_1912">Cafe 1912</option>
+                                    </select>
                                 </div>
                             </div>
                             <div class="mt-6 flex justify-end gap-3">

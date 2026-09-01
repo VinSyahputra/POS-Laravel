@@ -22,6 +22,10 @@ class MenuController extends Controller
                 $request->filled('search'),
                 fn ($query) => $query->where('name', 'like', '%'.$request->string('search')->trim().'%')
             )
+            ->when(
+                $request->filled('template'),
+                fn ($query) => $query->where('template', $request->string('template'))
+            )
             ->orderBy('name')
             ->get();
 

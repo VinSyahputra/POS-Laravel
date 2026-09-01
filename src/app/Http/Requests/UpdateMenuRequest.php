@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\Template;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateMenuRequest extends FormRequest
 {
@@ -17,6 +19,7 @@ class UpdateMenuRequest extends FormRequest
             'name' => ['required', 'string', 'max:150'],
             'price' => ['required', 'integer', 'min:0'],
             'category_id' => ['required', 'integer', 'exists:categories,id'],
+            'template' => ['nullable', Rule::enum(Template::class)],
         ];
     }
 

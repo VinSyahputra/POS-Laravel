@@ -69,9 +69,16 @@ document.addEventListener('alpine:init', () => {
         showCategoryForm: false,
         categoryForm: { id: null, name: '' },
         menuFilterCategoryId: '',
+        menuFilterTemplate: '',
         menuSearch: '',
         showMenuForm: false,
-        menuForm: { id: null, name: '', price: '', category_id: '' },
+        menuForm: { id: null, name: '', price: '', category_id: '', template: '' },
+
+        templateLabel(value) {
+            const labels = { FOODCOURT: 'Foodcourt', PASTRY_BAKERY: 'Pastry & Bakery', CAFE_1912: 'Cafe 1912' };
+
+            return labels[value] ?? '-';
+        },
 
         async init() {
             this.$watch('menuSearch', () => this.loadMenus());
@@ -166,6 +173,10 @@ document.addEventListener('alpine:init', () => {
                     params.set('search', this.menuSearch.trim());
                 }
 
+                if (this.menuFilterTemplate) {
+                    params.set('template', this.menuFilterTemplate);
+                }
+
                 const query = params.toString();
                 const data = await api(`/menus${query ? `?${query}` : ''}`);
                 this.menus = data.data;
@@ -186,6 +197,7 @@ document.addEventListener('alpine:init', () => {
                 name: menu.name,
                 price: menu.price,
                 category_id: menu.category_id,
+                template: menu.template ?? '',
             };
             this.showMenuForm = true;
         },
@@ -197,6 +209,7 @@ document.addEventListener('alpine:init', () => {
                 name: this.menuForm.name,
                 price: Number(this.menuForm.price),
                 category_id: Number(this.menuForm.category_id),
+                template: this.menuForm.template || null,
             };
             try {
                 if (this.menuForm.id) {
@@ -221,7 +234,7 @@ document.addEventListener('alpine:init', () => {
 
         cancelMenuForm() {
             this.showMenuForm = false;
-            this.menuForm = { id: null, name: '', price: '', category_id: '' };
+            this.menuForm = { id: null, name: '', price: '', category_id: '', template: '' };
         },
 
         async destroyMenu(menu) {
@@ -283,8 +296,9 @@ document.addEventListener('alpine:init', () => {
             return this.menus.filter((menu) => {
                 const matchCategory = !this.filterCategoryId || menu.category_id === this.filterCategoryId;
                 const matchSearch = !keyword || menu.name.toLowerCase().includes(keyword);
+                const matchTemplate = !this.template || menu.template === this.template;
 
-                return matchCategory && matchSearch;
+                return matchCategory && matchSearch && matchTemplate;
             });
         },
 
