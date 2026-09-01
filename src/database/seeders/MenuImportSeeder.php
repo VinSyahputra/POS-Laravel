@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\Template;
 use App\Models\Category;
 use App\Models\Menu;
 use Illuminate\Database\Seeder;
@@ -13,7 +14,42 @@ class MenuImportSeeder extends Seeder
      * - MENU CAFE 1912.xlsx
      * - MENU BOGA.xlsx
      * - MENU PASTERY.xlsx
+     *
+     * Setiap kategori berasal dari satu file sumber saja (tidak ada kategori
+     * yang overlap antar file), jadi pemetaan kategori -> outlet di bawah ini
+     * deterministik berdasarkan file asalnya.
      */
+    private const CATEGORY_TEMPLATE_MAP = [
+        // MENU CAFE 1912.xlsx (kolom "Sumber": Cafe 1912 - ...)
+        'Capcay' => Template::Cafe1912,
+        'Pasta' => Template::Cafe1912,
+        'Rice Bowl' => Template::Cafe1912,
+        'Steak' => Template::Cafe1912,
+        'Main Course' => Template::Cafe1912,
+        'Fried Rice' => Template::Cafe1912,
+        'Appetizer' => Template::Cafe1912,
+        'Dessert' => Template::Cafe1912,
+        'Sandwich' => Template::Cafe1912,
+        'Other' => Template::Cafe1912,
+        'Milk Blend' => Template::Cafe1912,
+        'Milk Base' => Template::Cafe1912,
+        'Mocktail' => Template::Cafe1912,
+        'Signature' => Template::Cafe1912,
+        'Espresso Base' => Template::Cafe1912,
+        'Manual Brew' => Template::Cafe1912,
+        'Tea Base' => Template::Cafe1912,
+        'Coffee Milk' => Template::Cafe1912,
+        // MENU BOGA.xlsx (seluruh isi file)
+        'Bakso Malang' => Template::Foodcourt,
+        'Mie Ayam' => Template::Foodcourt,
+        'Indomie Menu' => Template::Foodcourt,
+        'Snack' => Template::Foodcourt,
+        'Minuman' => Template::Foodcourt,
+        'Drink Corner' => Template::Foodcourt,
+        // MENU PASTERY.xlsx (seluruh isi file)
+        'Pastry' => Template::PastryBakery,
+    ];
+
     public function run(): void
     {
         $data = [
@@ -403,11 +439,12 @@ class MenuImportSeeder extends Seeder
 
         foreach ($data as $categoryName => $menus) {
             $category = Category::firstOrCreate(['name' => $categoryName]);
+            $template = self::CATEGORY_TEMPLATE_MAP[$categoryName] ?? null;
 
             foreach ($menus as $menu) {
                 Menu::updateOrCreate(
                     ['name' => $menu['name'], 'category_id' => $category->id],
-                    ['price' => $menu['price']]
+                    ['price' => $menu['price'], 'template' => $template]
                 );
             }
         }
