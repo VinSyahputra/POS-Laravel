@@ -8,7 +8,6 @@ use App\Http\Controllers\TransactionController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => view('dashboard'));
-Route::get('/generate-nota', fn () => view('generate-nota'));
 
 Route::resource('categories', CategoryController::class)->except(['create', 'edit', 'show']);
 Route::resource('menus', MenuController::class)->except(['create', 'edit', 'show']);

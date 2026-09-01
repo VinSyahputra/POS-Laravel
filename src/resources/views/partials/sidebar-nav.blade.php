@@ -40,8 +40,9 @@
         <span class="text-2xl">🖨️</span> Printer
     </a>
 
-    <a href="/generate-nota"
-        class="flex min-h-20 flex-col items-center justify-center gap-1 rounded-xl px-2 py-3 text-sm font-semibold transition {{ request()->is('generate-nota') ? 'bg-orange-500 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700' }}">
+    <a href="/?tab=budget" @click="$store.ui.goToTab('budget', $event)"
+        :class="$store.ui.isTabActive('budget') ? 'bg-orange-500 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'"
+        class="flex min-h-20 flex-col items-center justify-center gap-1 rounded-xl px-2 py-3 text-sm font-semibold transition">
         <span class="text-2xl">🎯</span> Budget
     </a>
 </aside>
