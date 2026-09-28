@@ -111,6 +111,40 @@ it('shows a transaction with its items', function () {
         ->assertJsonPath('data.items.0.qty', 3);
 });
 
+it('rejects items from another outlet than the transaction template', function () {
+    $foodcourt = Menu::factory()->create(['name' => 'Bakso Goreng', 'price' => 3000, 'template' => 'FOODCOURT']);
+    $cafe = Menu::factory()->create(['name' => 'Espresso', 'price' => 13000, 'template' => 'CAFE_1912']);
+
+    $this->postJson('/transactions', [
+        'items' => [
+            ['menu_id' => $cafe->id, 'qty' => 1],
+            ['menu_id' => $foodcourt->id, 'qty' => 1],
+        ],
+        'payment_amount' => 20000,
+        'template' => 'CAFE_1912',
+    ])->assertUnprocessable()
+        ->assertJsonValidationErrors('items');
+
+    expect(Transaction::count())->toBe(0)
+        ->and(TransactionItem::count())->toBe(0);
+});
+
+it('accepts items that belong to the transaction template', function () {
+    $cafe = Menu::factory()->create(['name' => 'Espresso', 'price' => 13000, 'template' => 'CAFE_1912']);
+    $unknownOutlet = Menu::factory()->create(['name' => 'Extra Rice', 'price' => 4000, 'template' => null]);
+
+    $this->postJson('/transactions', [
+        'items' => [
+            ['menu_id' => $cafe->id, 'qty' => 1],
+            ['menu_id' => $unknownOutlet->id, 'qty' => 1],
+        ],
+        'payment_amount' => 20000,
+        'template' => 'CAFE_1912',
+    ])->assertCreated();
+
+    expect(Transaction::first()->items)->toHaveCount(2);
+});
+
 it('keeps history intact after a menu is deleted', function () {
     $menu = Menu::factory()->create(['name' => 'Soto Ayam', 'price' => 18000]);
 

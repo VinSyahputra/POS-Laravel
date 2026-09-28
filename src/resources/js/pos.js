@@ -266,11 +266,28 @@ document.addEventListener('alpine:init', () => {
             this.resetOrderFields();
             await this.refresh();
 
+            this.$watch('template', () => this.dropMenusFromOtherTemplates());
             this.$watch('$store.ui.tab', (tab) => {
                 if (tab === 'cashier') {
                     this.refresh();
                 }
             });
+        },
+
+        /**
+         * Outlet diganti: buang item keranjang milik outlet lain supaya tidak
+         * ikut masuk saat nota digenerate.
+         */
+        dropMenusFromOtherTemplates() {
+            if (!this.template || this.menus.length === 0) {
+                return;
+            }
+
+            const allowedIds = new Set(
+                this.menus.filter((menu) => menu.template === this.template).map((menu) => menu.id)
+            );
+
+            this.cart = this.cart.filter((item) => allowedIds.has(item.menu_id));
         },
 
         async refresh() {

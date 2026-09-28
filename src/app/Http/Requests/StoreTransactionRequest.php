@@ -63,7 +63,38 @@ class StoreTransactionRequest extends FormRequest
                     );
                 }
             },
+            function (Validator $validator) {
+                if ($validator->errors()->any()) {
+                    return;
+                }
+
+                $this->validateMenuOutlets($validator);
+            },
         ];
+    }
+
+    /**
+     * Nota hanya boleh berisi menu outlet yang sama dengan template transaksi,
+     * supaya menu outlet lain tidak ikut tercetak saat nota digenerate.
+     */
+    private function validateMenuOutlets(Validator $validator): void
+    {
+        $transactionTemplate = $this->enum('template', Template::class);
+
+        if ($transactionTemplate === null) {
+            return;
+        }
+
+        foreach ($this->resolveMenus() as $menu) {
+            if ($menu->template === null || $menu->template === $transactionTemplate) {
+                continue;
+            }
+
+            $validator->errors()->add(
+                'items',
+                "Menu \"{$menu->name}\" adalah outlet {$menu->template->label()}, bukan {$transactionTemplate->label()}."
+            );
+        }
     }
 
     public function resolveSubtotal(): int

@@ -32,7 +32,16 @@ document.addEventListener('alpine:init', () => {
             this.orderDate = this.toLocalInputValue(now);
             this.entryTime = this.toLocalInputValue(now);
             await this.loadMenus();
-            this.$watch('template', () => this.loadMenus());
+            this.$watch('template', async () => {
+                const menus = await this.loadMenus();
+
+                if (menus === null) {
+                    // Gagal memuat daftar menu: hasil generate lama tetap dipertahankan.
+                    return;
+                }
+
+                this.dropMenusFromOtherTemplates(menus);
+            });
         },
 
         async loadMenus() {
@@ -41,11 +50,25 @@ document.addEventListener('alpine:init', () => {
             try {
                 const data = await api(`/menus?template=${this.template}`);
                 this.menus = data.data;
+
+                return data.data;
             } catch (e) {
                 this.error = e.message;
+
+                return null;
             } finally {
                 this.loading = false;
             }
+        },
+
+        /**
+         * Outlet diganti: buang hasil generate milik outlet lain supaya tidak
+         * ikut tercatat saat nota disubmit.
+         */
+        dropMenusFromOtherTemplates(menus) {
+            const allowedIds = new Set(menus.map((menu) => menu.id));
+
+            this.items = this.items.filter((item) => allowedIds.has(item.menu_id));
         },
 
         get filteredMenus() {

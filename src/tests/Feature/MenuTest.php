@@ -1,7 +1,19 @@
 <?php
 
+use App\Enums\Template;
 use App\Models\Category;
 use App\Models\Menu;
+use Database\Seeders\MenuImportSeeder;
+
+it('assigns an outlet to every imported menu', function () {
+    (new MenuImportSeeder)->run();
+
+    expect(Menu::count())->toBeGreaterThan(200)
+        ->and(Menu::whereNull('template')->count())->toBe(0)
+        ->and(Menu::where('name', 'Bakso Goreng')->value('template'))->toBe(Template::Foodcourt)
+        ->and(Menu::where('name', 'Vegetable Capcay')->value('template'))->toBe(Template::Cafe1912)
+        ->and(Menu::where('name', 'Klepon')->value('template'))->toBe(Template::PastryBakery);
+});
 
 it('lists menus with their category', function () {
     $category = Category::factory()->create(['name' => 'Minuman']);
